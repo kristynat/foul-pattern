@@ -1,0 +1,1003 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FOUL — Pattern Lab</title>
+<style>
+@font-face { font-family: "Everett"; src: url("fonty/TWKEverett-Regular.ttf") format("truetype"); font-weight: 400; }
+@font-face { font-family: "Everett"; src: url("fonty/TWKEverett-Medium.otf") format("opentype"); font-weight: 500; }
+@font-face { font-family: "DM Mono"; src: url("fonty/DMMono-Medium.ttf") format("truetype"); font-weight: 500; }
+
+:root {
+  --bg: #ffffff;
+  --box: #f4f6f7;
+  --stage: #eef3f6;
+  --text: #1d1d1f;
+  --muted: #8a9196;
+  --line: #e3e7ea;
+  --seg: #e6eaed;
+  --seg-on: #ffffff;
+  --track: #d9dee2;
+  --shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 1px rgba(0,0,0,.04);
+}
+:root[data-theme="dark"] {
+  --bg: #0b0c0d;
+  --box: #17191b;
+  --stage: #17191b;
+  --text: #f2f3f4;
+  --muted: #7d858a;
+  --line: #26292c;
+  --seg: #25282b;
+  --seg-on: #3a3e42;
+  --track: #33373b;
+  --shadow: 0 1px 3px rgba(0,0,0,.5);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); }
+body { font-family: "Everett", system-ui, sans-serif; -webkit-font-smoothing: antialiased; transition: background .25s, color .25s; }
+button { font: inherit; color: inherit; }
+.mono { font-family: "DM Mono", ui-monospace, monospace; font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: .03em; }
+
+/* header */
+.shell { max-width: 1920px; margin: 0 auto; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; gap: 24px; }
+.brand { display: flex; align-items: center; gap: 20px; }
+.brand h1 { font-size: 17px; font-weight: 500; letter-spacing: -.01em; margin: 0; padding-left: 20px; border-left: 1px solid var(--line); line-height: 20px; }
+.brand h1 span { color: var(--muted); font-weight: 400; }
+.logo { height: 18px; color: var(--text); display: block; }
+.logo svg { height: 100%; width: auto; display: block; }
+.logo path { fill: currentColor; }
+
+/* layout */
+main { display: grid; grid-template-columns: auto minmax(380px, 1fr); gap: 24px; padding: 0 40px 24px; align-items: start; }
+.stage { max-width: 100%; width: min(calc(100vh - 100px), calc(min(100vw, 1920px) - 80px - 24px - 380px)); min-width: 320px; }
+.canvas-wrap { aspect-ratio: 1 / 1; width: 100%; border-radius: 6px; overflow: hidden; background: var(--stage); }
+canvas { width: 100%; height: 100%; display: block; }
+.caption { display: flex; justify-content: space-between; padding: 8px 2px 0; color: var(--muted); }
+
+/* panel */
+aside { position: sticky; top: 12px; max-height: calc(100vh - 88px); overflow-y: auto; scrollbar-width: none;
+  display: flex; flex-direction: column; gap: 12px; }
+.col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+aside::-webkit-scrollbar { display: none; }
+.box { background: var(--box); border-radius: 8px; padding: 18px; min-width: 0; }
+.box-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.box-head h2 { font-size: 19px; font-weight: 500; letter-spacing: -.01em; margin: 0; }
+.box-head .mono { color: var(--muted); text-align: right; }
+.field { margin-top: 16px; }
+.field-head { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.field-head label { color: var(--muted); }
+
+/* segmented control */
+.seg { display: flex; background: var(--seg); border-radius: 6px; padding: 2px; gap: 2px; }
+.seg button { flex: 1; border: 0; background: transparent; border-radius: 4px; padding: 8px 4px; cursor: pointer; color: var(--muted); transition: background .15s, color .15s; white-space: nowrap; }
+.seg button:hover { color: var(--text); }
+.seg button.on { background: var(--seg-on); color: var(--text); box-shadow: var(--shadow); }
+.seg.arrows button { font-family: "Everett"; font-size: 16px; text-transform: none; padding: 5px 6px; }
+
+/* slider */
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; margin: 0; background: transparent; cursor: pointer; --p: 50%; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--text) var(--p), var(--track) var(--p)); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--track); }
+input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--text); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 0; margin-top: -7px; box-shadow: 0 1px 4px rgba(0,0,0,.25), 0 0 0 .5px rgba(0,0,0,.08); }
+input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+
+/* point picker */
+.picker { display: grid; grid-template-columns: repeat(3, 1fr); width: 108px; aspect-ratio: 1; background: var(--seg); border-radius: 6px; padding: 6px; }
+.picker button { border: 0; background: none; cursor: pointer; display: grid; place-items: center; padding: 0; }
+.picker button::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--track); transition: transform .15s, background .15s; }
+.picker button:hover::after { background: var(--muted); }
+.picker button.on::after { background: var(--text); transform: scale(1.5); }
+
+/* colors */
+.swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.sw { aspect-ratio: 1; border-radius: 4px; border: 0; padding: 0; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+.sw.on { box-shadow: 0 0 0 2px var(--box), 0 0 0 3.5px var(--text); }
+.pickers { display: flex; gap: 8px; align-items: center; }
+.pick { flex: 1; display: flex; align-items: center; gap: 10px; background: var(--seg); border-radius: 6px; padding: 6px; cursor: pointer; min-width: 0; }
+.pick input { -webkit-appearance: none; appearance: none; width: 26px; height: 26px; border: 0; padding: 0; border-radius: 3px; overflow: hidden; background: none; cursor: pointer; }
+.pick input::-webkit-color-swatch-wrapper { padding: 0; }
+.pick input::-webkit-color-swatch { border: 0; border-radius: 3px; }
+.pick input::-moz-color-swatch { border: 0; border-radius: 3px; }
+.pick span { color: var(--muted); }
+.icon-btn { border: 0; background: var(--seg); border-radius: 6px; width: 38px; height: 38px; cursor: pointer; font-size: 16px; }
+.icon-btn:hover { background: var(--seg-on); box-shadow: var(--shadow); }
+
+.btn-row { display: flex; gap: 8px; }
+.btn { flex: 1; border: 0; border-radius: 6px; padding: 12px; cursor: pointer; background: var(--text); color: var(--bg); }
+.btn.secondary { background: var(--seg); color: var(--text); }
+.btn:hover { opacity: .88; }
+label.btn { text-align: center; }
+.player { display: flex; gap: 10px; align-items: center; }
+.player-info { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.player-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player-info .mono { color: var(--muted); }
+.meters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.meter { display: flex; flex-direction: column; gap: 6px; }
+.meter span { color: var(--muted); }
+.meter-bar { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--text) var(--l, 0%), var(--track) var(--l, 0%)); }
+.btn:disabled { opacity: .5; cursor: default; }
+.sub-head { font-size: 16px; font-weight: 500; margin: 22px 0 -4px; padding-top: 18px; border-top: 1px solid var(--line); }
+.hint { color: var(--muted); font-size: 14px; line-height: 1.4; margin: 12px 0 0; }
+
+@media (max-width: 1100px) {
+  main { grid-template-columns: minmax(0, 1fr); }
+  aside { width: 100%; max-width: 560px; margin: 0 auto; }
+  .stage { width: min(100%, calc(100vh - 100px)); margin: 0 auto; }
+  aside { position: static; max-height: none; overflow: visible; }
+}
+@media (max-width: 640px) {
+  header { padding: 14px 16px; }
+  .brand { gap: 14px; min-width: 0; }
+  .brand h1 { font-size: 15px; padding-left: 14px; white-space: nowrap; }
+  .brand h1 span { display: none; }
+  #theme { width: 112px !important; flex-shrink: 0; }
+  .box { padding: 16px; }
+  .seg button { padding: 10px 2px; }
+  main { padding: 0 16px 24px; }
+  .stage { min-width: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+<header>
+  <div class="brand">
+    <a class="logo" aria-label="FOUL"><svg width="440" height="90" viewBox="0 0 440 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M90.9943 0C92.2301 0 93.2319 1.00179 93.2319 2.23756V15.663C93.2319 16.8987 92.2301 17.9005 90.9943 17.9005H20.1381C18.9023 17.9005 17.9005 18.9023 17.9005 20.1381V33.5635C17.9005 34.7992 18.9023 35.801 20.1381 35.801H79.0606C80.2964 35.801 81.2982 36.8028 81.2982 38.0386V51.464C81.2982 52.6998 80.2964 53.7016 79.0606 53.7016H20.1381C18.9023 53.7016 17.9005 54.7034 17.9005 55.9391V87.265C17.9005 88.5008 16.8987 89.5026 15.663 89.5026H2.23757C1.00179 89.5026 0 88.5008 0 87.265V19.7542C0 18.5674 0.471476 17.4291 1.31071 16.5898L16.5898 1.31071C17.4291 0.471476 18.5674 0 19.7542 0H90.9943Z" fill="white"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M193.56 0C194.747 0 195.885 0.471476 196.725 1.31071L212.004 16.5898C212.843 17.4291 213.315 18.5674 213.315 19.7542V69.7484C213.315 70.9352 212.843 72.0735 212.004 72.9128L196.725 88.1919C195.885 89.0311 194.747 89.5026 193.56 89.5026H124.92C123.733 89.5026 122.595 89.0311 121.755 88.1919L106.476 72.9128C105.637 72.0735 105.166 70.9352 105.166 69.7484V19.7542C105.166 18.5674 105.637 17.4291 106.476 16.5898L121.755 1.31071C122.595 0.471476 123.733 0 124.92 0H193.56ZM125.304 17.9005C124.068 17.9005 123.066 18.9023 123.066 20.1381V69.3645C123.066 70.6003 124.068 71.6021 125.304 71.6021H193.176C194.412 71.6021 195.414 70.6003 195.414 69.3645V20.1381C195.414 18.9023 194.412 17.9005 193.176 17.9005H125.304Z" fill="white"/>
+<path d="M246.878 0C248.114 0 249.116 1.00179 249.116 2.23756V69.3645C249.116 70.6003 250.117 71.6021 251.353 71.6021H308.038C309.274 71.6021 310.276 70.6003 310.276 69.3645V2.23756C310.276 1.00179 311.277 0 312.513 0H325.939C327.174 0 328.176 1.00179 328.176 2.23756V69.7484C328.176 70.9352 327.705 72.0735 326.866 72.9128L311.586 88.1919C310.747 89.0311 309.609 89.5026 308.422 89.5026H250.969C249.782 89.5026 248.644 89.0311 247.805 88.1919L232.526 72.9128C231.687 72.0735 231.215 70.9352 231.215 69.7484V2.23756C231.215 1.00179 232.217 0 233.453 0H246.878Z" fill="white"/>
+<path d="M361.74 0C362.975 0 363.977 1.00179 363.977 2.23756V69.3645C363.977 70.6003 364.979 71.6021 366.215 71.6021H437.071C438.307 71.6021 439.309 72.6039 439.309 73.8396V87.265C439.309 88.5008 438.307 89.5026 437.071 89.5026H365.831C364.644 89.5026 363.506 89.0311 362.667 88.1919L347.387 72.9128C346.548 72.0735 346.077 70.9352 346.077 69.7484V2.23756C346.077 1.00179 347.079 0 348.314 0H361.74Z" fill="white"/>
+<path d="M434.833 6.7127V8.95026H432.596V6.7127H428.121V8.95026H430.358L434.833 13.4254H431.85L428.121 9.69612V13.4254H425.883V4.47513H432.596L434.833 6.7127Z" fill="white"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M430.358 0C435.301 0 439.309 4.00717 439.309 8.95026C439.309 13.8934 435.301 17.9005 430.358 17.9005C425.415 17.9005 421.408 13.8934 421.408 8.95026C421.408 4.00717 425.415 0 430.358 0ZM430.358 1.49171C426.239 1.49171 422.9 4.83102 422.9 8.95026C422.9 13.0695 426.239 16.4088 430.358 16.4088C434.478 16.4088 437.817 13.0695 437.817 8.95026C437.817 4.83102 434.478 1.49171 430.358 1.49171Z" fill="white"/>
+</svg></a>
+    <h1>Play the line. <span>Make the pattern.</span></h1>
+  </div>
+  <div class="seg mono" id="theme" style="width:150px"></div>
+</header>
+
+<main>
+  <div>
+    <div class="stage">
+      <div class="canvas-wrap"><canvas id="c"></canvas></div>
+      <div class="caption mono"><span>Pattern / 1:1</span><span id="summary"></span></div>
+    </div>
+  </div>
+  <aside id="panel"></aside>
+</main>
+</div>
+
+<script>
+/* ============ data ============ */
+const MAX_SHAPES = 32;
+
+const PALETTES = [
+  ["#0d0d0d", "#e9e6d6"], ["#0d0d0d", "#c3dccb"], ["#0d0d0d", "#b4c7d4"], ["#0d0d0d", "#dcfadc"],
+  ["#1d1d1d", "#55f3fa"], ["#0d0d0d", "#8f9496"], ["#c6d5da", "#dfebef"], ["#0d0d0d", "#5fd6b5"],
+];
+const GRADIENTS = [
+  ["#8b7cf6", "#55e6fb"], ["#5fd6b5", "#b4e8ff"], ["#0d0d0d", "#3a4a55"], ["#e9e6d6", "#b4c7d4"],
+  ["#ff7a59", "#ffd166"], ["#1d2b64", "#5fd6b5"], ["#c6d5da", "#eef4f7"], ["#55f3fa", "#c4c4c4"],
+];
+const ARROWS = [["→", 0], ["↓", 90], ["←", 180], ["↑", 270]];
+
+const state = {
+  // linky: 0 rovnoběžné, 1 sbíhavé
+  mode: 1, orient: 0, n: 16, vx: 1, vy: 0,
+  // tloušťka
+  duty: 0.5, duty2: 0.5, dDir: 0,
+  // tvar: type -1 žádný, 0 linka, 1 kruh, 2 obdélník; layout 0 jeden, 1 prolínání
+  shape: { type: 1, layout: 1, size: 2.4, count: 8, stroke: 0, dir: 0, shift: 0.35 },
+  // barvy
+  // barvy: linky i pozadí mají každé typ 0 barva, 1 gradient; linky navíc 2 = odstín pozadí
+  // gradient: gType 0 lineární / 1 kruhový, gDir ve stupních
+  line: { type: 0, c1: PALETTES[2][0], c2: GRADIENTS[5][0], gType: 0, gDir: 0, contrast: 0.2 },
+  bg:   { type: 0, c1: PALETTES[2][1], c2: GRADIENTS[0][1], gType: 0, gDir: 0 },
+  // animace: 0 žádná, 1 tok linek, 2 vlna tvarem, 3 dech tvaru; speed = smyčky za sekundu
+  anim: { type: 0, speed: 0.25 },
+  // hudba: síla vazeb 0–1 (basy → pulz tvaru, středy → tok linek, výšky → tloušťka)
+  music: { pulse: 0.7, flow: 0.5, thick: 0.4 },
+  // kamera: mode 0 tloušťka linek, 1 posun linek
+  camera: { mode: 0, amount: 1, contrast: 4, smooth: 0, detail: 0.5, invert: 0, mirror: 1 },
+};
+
+/* ============ WebGL ============ */
+const canvas = document.getElementById("c");
+const gl = canvas.getContext("webgl", { preserveDrawingBuffer: true, antialias: false });
+
+const fs = `
+precision highp float;
+uniform vec2 uRes, uV;
+uniform int uMode, uCount, uLType, uLGType, uBType, uBGType;
+uniform float uFlow;
+uniform sampler2D uCam;
+uniform int uCamOn, uCamMode;
+uniform float uCamAmt, uCamContrast, uCamAspect, uCamMirror, uCamLo, uCamHi, uCamInvert;
+
+// tmavost obrazu kamery 0..1 v bodě p (výřez na čtverec, volitelně zrcadlený)
+float camDark(vec2 p) {
+  vec2 c = p;
+  if (uCamAspect > 1.0) c.x = 0.5 + (p.x - 0.5) / uCamAspect;
+  else c.y = 0.5 + (p.y - 0.5) * uCamAspect;
+  if (uCamMirror > 0.5) c.x = 1.0 - c.x;
+  // textura je už zmenšená a rozmazaná na CPU, bilineární čtení dá hladké plochy
+  float l = dot(texture2D(uCam, c).rgb, vec3(0.299, 0.587, 0.114));
+  l = clamp((l - uCamLo) / max(uCamHi - uCamLo, 0.05), 0.0, 1.0);      // automatická expozice
+  float d = 1.0 - smoothstep(0.0, 1.0, clamp((l - 0.5) * uCamContrast + 0.5, 0.0, 1.0));
+  return uCamInvert > 0.5 ? 1.0 - d : d;
+}
+uniform int uSS;
+uniform float uN, uOrient, uDuty, uDuty2, uDDir, uLGDir, uBGDir, uLContrast;
+uniform vec3 uL1, uL2, uB1, uB2;
+
+uniform vec4 uA[${MAX_SHAPES}];
+uniform vec4 uB[${MAX_SHAPES}];
+const float TAU = 6.28318530718;
+
+// 0..1 poloha bodu p ve směru úhlu a (přes celou plochu)
+float along(vec2 p, float a) {
+  vec2 d = vec2(cos(a), sin(a));
+  return clamp(dot(p - 0.5, d) / (abs(d.x) + abs(d.y)) + 0.5, 0.0, 1.0);
+}
+vec3 paint(vec3 a, vec3 b, int kind, int gType, float gDir, vec2 p) {
+  if (kind == 0) return a;
+  float t = gType == 0 ? along(p, gDir) : clamp(length(p - 0.5) / 0.7071, 0.0, 1.0);
+  return mix(a, b, t);
+}
+
+
+float inShape(vec4 a, vec4 b, vec2 p) {
+  vec2 q = p - a.yz;
+  if (a.w > 0.5) q = vec2(q.y, -q.x);          // linka natočená svisle
+  vec2 h = b.xy * 0.5;
+  float st = b.z;
+  if (a.x < 0.5) {                              // linka
+    return (abs(q.x) < h.x && abs(q.y) < h.y) ? 1.0 : 0.0;
+  } else if (a.x < 1.5) {                       // kruh
+    float r = length(q);
+    if (r > h.x) return 0.0;
+    if (st > 0.0 && r < h.x - st) return 0.0;
+    return 1.0;
+  }
+  if (abs(q.x) > h.x || abs(q.y) > h.y) return 0.0;   // obdélník
+  if (st > 0.0 && abs(q.x) < h.x - st && abs(q.y) < h.y - st) return 0.0;
+  return 1.0;
+}
+
+float sampleAt(vec2 p, float dark) {
+  float ph;
+  if (uMode == 0) {
+    ph = (uOrient < 0.5 ? p.x : p.y) * uN;
+  } else {
+    vec2 q = p - uV;
+    ph = atan(q.y, q.x) / TAU * floor(uN * 2.0 + 0.5);
+  }
+  ph += uFlow;
+  if (uCamOn == 1 && uCamMode >= 1) ph += dark * uCamAmt * (uCamMode == 1 ? 1.2 : 0.6);
+  for (int i = 0; i < ${MAX_SHAPES}; i++) {
+    if (i >= uCount) break;
+    ph += inShape(uA[i], uB[i], p) * uB[i].w;
+  }
+  float duty = mix(uDuty, uDuty2, along(p, uDDir));
+  if (uCamOn == 1 && uCamMode != 1) duty = mix(duty, dark * 0.8, uCamAmt);     // až na nulu = linka se přeruší
+  return fract(ph) < duty ? 1.0 : 0.0;
+}
+
+void main() {
+  float acc = 0.0;
+  float ss = float(uSS);
+  vec2 pc = gl_FragCoord.xy / uRes; pc.y = 1.0 - pc.y;
+  float dark = uCamOn == 1 ? camDark(pc) : 0.0;
+  for (int j = 0; j < 4; j++) for (int i = 0; i < 4; i++) {
+    if (i >= uSS || j >= uSS) continue;
+    vec2 p = (gl_FragCoord.xy - 0.5 + (vec2(float(i), float(j)) + 0.5) / ss) / uRes;
+    p.y = 1.0 - p.y;
+    acc += sampleAt(p, dark);
+  }
+  acc /= ss * ss;
+  vec2 p = gl_FragCoord.xy / uRes; p.y = 1.0 - p.y;
+  vec3 base = paint(uB1, uB2, uBType, uBGType, uBGDir, p);
+  vec3 line;
+  if (uLType == 2) line = uLContrast >= 0.0 ? mix(base, vec3(1.0), uLContrast) : mix(base, vec3(0.0), -uLContrast);
+  else line = paint(uL1, uL2, uLType, uLGType, uLGDir, p);
+  gl_FragColor = vec4(mix(base, line, acc), 1.0);
+}`;
+
+function compile(type, src) {
+  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, "attribute vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }"));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fs));
+gl.bindAttribLocation(prog, 0, "p");
+gl.linkProgram(prog); gl.useProgram(prog);
+gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+const camTex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, camTex);
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+[gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach(k => gl.texParameteri(gl.TEXTURE_2D, k, gl.CLAMP_TO_EDGE));
+[gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER].forEach(k => gl.texParameteri(gl.TEXTURE_2D, k, gl.LINEAR));
+const U = {};
+["uCam","uCamOn","uCamMode","uCamAmt","uCamContrast","uCamAspect","uCamMirror","uCamLo","uCamHi","uCamInvert","uFlow","uSS","uRes","uV","uMode","uCount","uLType","uLGType","uBType","uBGType","uN","uOrient","uDuty","uDuty2","uDDir","uLGDir","uBGDir","uLContrast","uL1","uL2","uB1","uB2","uA","uB"]
+  .forEach(n => U[n] = gl.getUniformLocation(prog, n));
+
+const hex = h => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16) / 255);
+const rad = d => d * Math.PI / 180;
+const TAU = Math.PI * 2;
+
+/* Tvar stojí uprostřed plochy, u sbíhavých linek v bodě sbíhání. */
+function shapeList(t) {
+  const c = state.shape, a = state.anim;
+  const wave = a.type === 2;
+  const breath = (a.type === 3 ? 1 + 0.18 * Math.sin(TAU * t * a.speed) : 1) * musicMod.size;
+  if (c.type < 0) return [];
+  const cx = state.mode === 1 ? state.vx : 0.5, cy = state.mode === 1 ? state.vy : 0.5;
+  const n = c.layout === 1 ? Math.round(c.count) : 1;
+  const out = [];
+  for (let i = n; i >= 1; i--) {
+    const k = c.size * breath * i / n;
+    const shift = wave ? c.shift + 0.22 * Math.sin(TAU * (t * a.speed - i / n)) : c.shift;
+    const line = c.type === 0;
+    out.push({ type: c.type, x: cx, y: cy, w: line ? 4 : k, h: line ? k * 0.5 : k,
+               vertical: line && c.dir === 90, stroke: line ? 0 : c.stroke, shift });
+  }
+  return out.slice(0, MAX_SHAPES);
+}
+
+function draw(w, h, t = 0, ss = 4) {
+  gl.viewport(0, 0, w, h);
+  gl.uniform1i(U.uSS, ss);
+  const camReady = !!(cam.small && cam.video && cam.video.readyState >= 2);
+  if (camReady) {
+    gl.bindTexture(gl.TEXTURE_2D, camTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cam.small);
+  }
+  gl.uniform1i(U.uCam, 0);
+  gl.uniform1i(U.uCamOn, camReady ? 1 : 0);
+  gl.uniform1i(U.uCamMode, state.camera.mode);
+  gl.uniform1f(U.uCamAmt, state.camera.amount);
+  gl.uniform1f(U.uCamContrast, state.camera.contrast);
+  gl.uniform1f(U.uCamAspect, camReady ? cam.video.videoWidth / cam.video.videoHeight : 1);
+  gl.uniform1f(U.uCamMirror, state.camera.mirror);
+  gl.uniform1f(U.uCamLo, cam.lo);
+  gl.uniform1f(U.uCamHi, cam.hi);
+  gl.uniform1f(U.uCamInvert, state.camera.invert);
+  gl.uniform1f(U.uFlow, ((state.anim.type === 1 ? t * state.anim.speed : 0) + musicMod.flow) % 1);
+  gl.uniform2f(U.uRes, w, h);
+  gl.uniform2f(U.uV, state.vx, state.vy);
+  gl.uniform1i(U.uMode, state.mode);
+  gl.uniform1f(U.uN, state.n);
+  gl.uniform1f(U.uOrient, state.orient);
+  gl.uniform1f(U.uDuty, clampDuty(state.duty + musicMod.duty));
+  gl.uniform1f(U.uDuty2, clampDuty(state.duty2 + musicMod.duty));
+  gl.uniform1f(U.uDDir, rad(state.dDir));
+  const L = state.line, Bg = state.bg;
+  gl.uniform1i(U.uLType, L.type); gl.uniform1i(U.uLGType, L.gType); gl.uniform1f(U.uLGDir, rad(L.gDir));
+  gl.uniform3fv(U.uL1, hex(L.c1)); gl.uniform3fv(U.uL2, hex(L.c2)); gl.uniform1f(U.uLContrast, L.contrast);
+  gl.uniform1i(U.uBType, Bg.type); gl.uniform1i(U.uBGType, Bg.gType); gl.uniform1f(U.uBGDir, rad(Bg.gDir));
+  gl.uniform3fv(U.uB1, hex(Bg.c1)); gl.uniform3fv(U.uB2, hex(Bg.c2));
+  const shapes = shapeList(t);
+  const A = new Float32Array(MAX_SHAPES * 4), B = new Float32Array(MAX_SHAPES * 4);
+  shapes.forEach((s, i) => {
+    A.set([s.type, s.x, s.y, s.vertical ? 1 : 0], i * 4);
+    B.set([s.w, s.h, s.stroke, s.shift], i * 4);
+  });
+  gl.uniform1i(U.uCount, shapes.length);
+  gl.uniform4fv(U.uA, A); gl.uniform4fv(U.uB, B);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+/* ============ kamera ============ */
+const cam = { stream: null, video: null, error: "", lo: 0, hi: 1, small: null, frame: 0 };
+
+// Každý snímek: obraz se zmenší (Detail) a rozmaže (Hladkost) do malého plátna, které jde do shaderu.
+// Každý 3. snímek z něj automatická expozice vezme 5. a 95. percentil jasu.
+function updateCamFrame() {
+  if (!cam.video || cam.video.readyState < 2) return;
+  const cm = state.camera, vw = cam.video.videoWidth || 16, vh = cam.video.videoHeight || 9;
+  const w = Math.round(48 + cm.detail * 272), h = Math.max(8, Math.round(w * vh / vw));
+  if (!cam.small) cam.small = document.createElement("canvas");
+  if (cam.small.width !== w || cam.small.height !== h) { cam.small.width = w; cam.small.height = h; }
+  const g = cam.small.getContext("2d", { willReadFrequently: true });
+  g.filter = `blur(${(cm.smooth * w / 60).toFixed(2)}px)`;
+  g.drawImage(cam.video, 0, 0, w, h);
+  g.filter = "none";
+  if (cam.frame++ % 3) return;
+  const d = g.getImageData(0, 0, w, h).data, lum = [];
+  for (let i = 0; i < d.length; i += 8) lum.push((d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) / 255);
+  lum.sort((a, b) => a - b);
+  cam.lo += (lum[Math.floor(lum.length * 0.05)] - cam.lo) * 0.3;
+  cam.hi += (lum[Math.floor(lum.length * 0.95)] - cam.hi) * 0.3;
+}
+
+async function startCamera() {
+  cam.error = "";
+  try {
+    cam.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }, audio: false });
+    cam.video = document.createElement("video");
+    Object.assign(cam.video, { muted: true, playsInline: true, srcObject: cam.stream });
+    await cam.video.play();
+  } catch (e) {
+    cam.stream = null; cam.video = null;
+    cam.error = !window.isSecureContext
+      ? "Kamera funguje jen přes https nebo localhost."
+      : "Kameru se nepodařilo zapnout — povol ji prohlížeči.";
+  }
+  build(); render();
+}
+
+function stopCamera() {
+  if (cam.stream) cam.stream.getTracks().forEach(t => t.stop());
+  cam.stream = null; cam.video = null; cam.small = null;
+  build(); render();
+}
+
+/* ============ hudba ============ */
+const music = { el: null, ctx: null, analyser: null, dest: null, bins: null, name: "",
+                bass: 0, mid: 0, high: 0, bassSlow: 0, kick: 0, flow: 0, last: 0 };
+let musicMod = { size: 1, flow: 0, duty: 0 };
+const clampDuty = v => Math.min(0.98, Math.max(0.02, v));
+const musicPlaying = () => !!(music.el && !music.el.paused);
+
+function loadMusic(file) {
+  if (!music.ctx) {
+    music.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    music.el = new Audio();
+    music.el.crossOrigin = "anonymous";
+    const src = music.ctx.createMediaElementSource(music.el);
+    music.analyser = music.ctx.createAnalyser();
+    music.analyser.fftSize = 2048;
+    music.analyser.smoothingTimeConstant = 0.6;
+    music.dest = music.ctx.createMediaStreamDestination();
+    src.connect(music.analyser);
+    src.connect(music.ctx.destination);
+    src.connect(music.dest);
+    music.bins = new Uint8Array(music.analyser.frequencyBinCount);
+    music.el.addEventListener("ended", () => { stopRecording(); build(); });
+    music.el.addEventListener("play", () => { build(); render(); });
+    music.el.addEventListener("pause", () => build());
+  }
+  if (music.el.src) URL.revokeObjectURL(music.el.src);
+  music.el.src = URL.createObjectURL(file);
+  music.name = file.name.replace(/\.[^.]+$/, "");
+  music.ctx.resume();
+  music.el.play();
+}
+
+function band(lo, hi) {
+  const hz = music.ctx.sampleRate / music.analyser.fftSize;
+  const a = Math.max(1, Math.floor(lo / hz)), b = Math.min(music.bins.length - 1, Math.ceil(hi / hz));
+  let sum = 0;
+  for (let i = a; i <= b; i++) sum += music.bins[i];
+  return sum / ((b - a + 1) * 255);
+}
+
+function updateMusic(now) {
+  const dt = Math.min(0.1, (now - (music.last || now)) / 1000);
+  music.last = now;
+  if (!musicPlaying()) {
+    // po zastavení se pohyb plynule dotlumí, tok zůstane, kde skončil
+    music.kick *= 0.85; music.high *= 0.85;
+  } else {
+    music.analyser.getByteFrequencyData(music.bins);
+    music.bass = band(30, 150);
+    music.mid = band(250, 2000);
+    music.high = band(4000, 12000);
+    // úder = basy výrazně nad svým pomalým průměrem; rychlý náběh, pomalý dozvuk
+    music.bassSlow += (music.bass - music.bassSlow) * 0.03;
+    const hit = Math.min(1, Math.max(0, (music.bass - music.bassSlow) * 5));
+    music.kick = Math.max(hit, music.kick * 0.9);
+    music.flow = (music.flow + dt * (0.05 + music.mid * 2.2) * state.music.flow) % 1;
+  }
+  const m = state.music;
+  musicMod = {
+    size: 1 + 0.28 * m.pulse * music.kick,
+    flow: music.flow,
+    duty: 0.3 * m.thick * (music.high * 2 - 0.3),
+  };
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.style.setProperty("--l", Math.min(1, v) * 100 + "%"); };
+  set("meter-bass", music.kick); set("meter-mid", music.mid * 1.4); set("meter-high", music.high * 2.5);
+  const time = document.getElementById("music-time");
+  if (time && music.el) time.textContent = `${fmtTime(music.el.currentTime)} / ${fmtTime(music.el.duration)}`;
+}
+const fmtTime = v => Number.isFinite(v) ? `${Math.floor(v / 60)}:${String(Math.floor(v % 60)).padStart(2, "0")}` : "0:00";
+
+let raf = 0;
+let clockStart = performance.now();
+let recording = null;   // { size, start }
+const animating = () => state.anim.type > 0 || musicPlaying() || !!cam.stream;
+
+function render() {
+  if (raf) return;
+  raf = requestAnimationFrame(() => {
+    raf = 0;
+    const now = performance.now();
+    updateMusic(now);
+    updateCamFrame();
+    if (recording) {
+      const t = (now - recording.start) / 1000;
+      if (canvas.width !== recording.size) { canvas.width = canvas.height = recording.size; }
+      draw(recording.size, recording.size, t, 2);
+    } else {
+      const r = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
+      if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+      draw(W, H, (now - clockStart) / 1000, animating() ? 2 : 4);
+    }
+    if (animating() || recording) render();
+    const shapeName = ["Linka", "Kruh", "Obdélník"][state.shape.type] || "Bez tvaru";
+    document.getElementById("summary").textContent =
+      `${state.mode ? "Sbíhavé" : "Rovnoběžné"} / ${shapeName}${state.shape.type >= 0 && state.shape.layout ? " × " + state.shape.count : ""}`;
+  });
+}
+
+/* ============ UI kit ============ */
+function el(tag, cls, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  return e;
+}
+
+function box(area, title, note, children) {
+  const b = el("section", "box");
+  b.dataset.area = area;
+  const head = el("div", "box-head");
+  head.append(el("h2", null, title), el("span", "mono", note));
+  b.append(head);
+  children.filter(Boolean).forEach(c => b.append(c));
+  return b;
+}
+
+function field(label, control, value) {
+  const f = el("div", "field");
+  const head = el("div", "field-head");
+  head.append(el("label", "mono", label));
+  if (value) head.append(value);
+  f.append(head, control);
+  return f;
+}
+
+// segmentový přepínač; změna vždy překreslí panel
+function seg(options, obj, key, cls = "") {
+  const s = el("div", "seg mono " + cls);
+  options.forEach(([name, val]) => {
+    const b = el("button", obj[key] === val ? "on" : "", name);
+    b.addEventListener("click", () => {
+      if (obj === state.anim) clockStart = performance.now();
+      obj[key] = val; build(); render();
+    });
+    s.append(b);
+  });
+  return s;
+}
+
+function range(label, obj, key, min, max, step, fmt = v => v) {
+  const input = el("input");
+  Object.assign(input, { type: "range", min, max, step, value: obj[key] });
+  const out = el("span", "mono", fmt(obj[key]));
+  const fill = () => input.style.setProperty("--p", ((obj[key] - min) / (max - min) * 100) + "%");
+  fill();
+  input.addEventListener("input", () => {
+    obj[key] = parseFloat(input.value);
+    out.textContent = fmt(obj[key]);
+    fill(); render();
+  });
+  return field(label, input, out);
+}
+
+function picker() {
+  const p = el("div", "picker");
+  [0, 0.5, 1].forEach(y => [0, 0.5, 1].forEach(x => {
+    const b = el("button", state.vx === x && state.vy === y ? "on" : "");
+    b.title = `${x * 100}% / ${y * 100}%`;
+    b.addEventListener("click", () => { state.vx = x; state.vy = y; build(); render(); });
+    p.append(b);
+  }));
+  return p;
+}
+
+function swatches(list, onPick, isOn, style) {
+  const w = el("div", "swatches");
+  list.forEach(([a, b]) => {
+    const s = el("button", "sw" + (isOn(a, b) ? " on" : ""));
+    s.style.background = style(a, b);
+    s.addEventListener("click", () => { onPick(a, b); build(); render(); });
+    w.append(s);
+  });
+  return w;
+}
+
+function colorPickers(obj, keys) {
+  const row = el("div", "pickers");
+  keys.forEach(([k, label]) => {
+    const lab = el("label", "pick");
+    const input = el("input");
+    input.type = "color"; input.value = obj[k];
+    input.addEventListener("input", () => { obj[k] = input.value; render(); });
+    input.addEventListener("change", () => build());
+    lab.append(input, el("span", "mono", label));
+    row.append(lab);
+  });
+  if (keys.length === 2) {
+    const swap = el("button", "icon-btn", "⇄");
+    swap.title = "Prohodit";
+    swap.addEventListener("click", () => { [obj[keys[0][0]], obj[keys[1][0]]] = [obj[keys[1][0]], obj[keys[0][0]]]; build(); render(); });
+    row.append(swap);
+  }
+  return row;
+}
+
+// jedna barevná vrstva (linky / pozadí): barva nebo gradient se vším nastavením
+function paintFields(obj, label) {
+  const out = [];
+  if (obj.type === 0) out.push(field("Barva", colorPickers(obj, [["c1", label]])));
+  if (obj.type === 1) {
+    out.push(field("Přechod", swatches(GRADIENTS, (a, b) => { obj.c1 = a; obj.c2 = b; },
+      (a, b) => obj.c1 === a && obj.c2 === b, (a, b) => `linear-gradient(135deg, ${a}, ${b})`)));
+    out.push(field("Barvy přechodu", colorPickers(obj, [["c1", "Barva 1"], ["c2", "Barva 2"]])));
+    out.push(field("Typ přechodu", seg([["Lineární", 0], ["Kruhový", 1]], obj, "gType")));
+    if (obj.gType === 0) out.push(field("Směr přechodu", seg(ARROWS, obj, "gDir", "arrows")));
+  }
+  return out;
+}
+
+const pct = v => Math.round(v * 100) + "%";
+
+/* ============ panel ============ */
+function build() {
+  const panel = document.getElementById("panel");
+  const scroll = panel.scrollTop;
+  panel.innerHTML = "";
+  const add = b => panel.append(b);
+  const s = state, c = s.shape;
+
+  add(box("linky", "Linky", "Základ", [
+    seg([["Rovnoběžné", 0], ["Sbíhavé", 1]], s, "mode"),
+    s.mode === 0
+      ? field("Směr", seg([["Svisle", 0], ["Vodorovně", 1]], s, "orient"))
+      : field("Bod sbíhání", picker()),
+    range(s.mode ? "Počet paprsků" : "Počet linek", s, "n", 2, 60, 1, v => s.mode ? Math.round(v * 2) : v),
+  ]));
+
+  add(box("tloustka", "Tloušťka", "Od tenké po širokou", [
+    range("Začátek", s, "duty", 0.02, 0.98, 0.01, pct),
+    range("Konec", s, "duty2", 0.02, 0.98, 0.01, pct),
+    field("Směr zesílení", seg(ARROWS, s, "dDir", "arrows")),
+  ]));
+
+  const hasShape = c.type >= 0, isLine = c.type === 0;
+  add(box("tvar", "Tvar", s.mode ? "V bodě sbíhání" : "Uprostřed", [
+    seg([["Žádný", -1], ["Kruh", 1], ["Obdélník", 2], ["Linka", 0]], c, "type"),
+    hasShape && field("Uspořádání", seg([["Jeden", 0], ["Prolínání", 1]], c, "layout")),
+    hasShape && isLine && field("Směr linky", seg([["Vodorovně", 0], ["Svisle", 90]], c, "dir")),
+    hasShape && range(isLine ? "Tloušťka" : "Velikost", c, "size", 0.05, isLine ? 1.5 : 3, 0.005, pct),
+    hasShape && c.layout === 1 && range("Vrstvy", c, "count", 2, MAX_SHAPES, 1),
+    hasShape && !isLine && range("Obrys", c, "stroke", 0, 0.3, 0.005, v => v === 0 ? "Plný" : pct(v)),
+    hasShape && range("Posun linek uvnitř", c, "shift", 0, 1, 0.01, v => Math.abs(v - 0.5) < 0.005 ? "Prohodit" : pct(v)),
+  ]));
+
+  const L = s.line, Bg = s.bg;
+  const swapAll = el("button", "btn mono secondary", "⇄ Prohodit linky a pozadí");
+  swapAll.disabled = L.type === 2;
+  swapAll.addEventListener("click", () => {
+    ["type", "c1", "c2", "gType", "gDir"].forEach(k => { [L[k], Bg[k]] = [Bg[k], L[k]]; });
+    build(); render();
+  });
+  const swapRow = el("div", "btn-row"); swapRow.append(swapAll);
+  add(box("barvy", "Barvy", "Linky + pozadí", [
+    field("Paleta", swatches(PALETTES, (a, b) => { L.type = 0; Bg.type = 0; L.c1 = a; Bg.c1 = b; },
+      (a, b) => L.type === 0 && Bg.type === 0 && L.c1 === a && Bg.c1 === b, (a, b) => `linear-gradient(135deg, ${a} 50%, ${b} 50%)`)),
+    el("div", "sub-head", "Linky"),
+    field("Výplň linek", seg([["Barva", 0], ["Gradient", 1], ["Odstín pozadí", 2]], L, "type")),
+    ...paintFields(L, "Linka"),
+    L.type === 2 && range("Kontrast linek", L, "contrast", -0.6, 0.6, 0.01,
+      v => Math.abs(v) < 0.005 ? "0" : (v > 0 ? "Světlejší " : "Tmavší ") + pct(Math.abs(v))),
+    el("div", "sub-head", "Pozadí"),
+    field("Výplň pozadí", seg([["Barva", 0], ["Gradient", 1]], Bg, "type")),
+    ...paintFields(Bg, "Pozadí"),
+    field("", swapRow),
+  ]));
+
+  const an = s.anim, loop = 1 / an.speed;
+  const rec = el("div", "btn-row");
+  const recBtn = el("button", "btn mono secondary", recording && !recording.audio ? "Nahrávám…" : "Nahrát smyčku (video)");
+  recBtn.disabled = !!recording;
+  recBtn.addEventListener("click", recordLoop);
+  rec.append(recBtn);
+  add(box("animace", "Animace", an.type ? `Smyčka ${loop.toFixed(1)} s` : "Statický pattern", [
+    seg([["Žádná", 0], ["Tok", 1], ["Vlna", 2], ["Dech", 3]], an, "type"),
+    an.type === 0 ? null : el("p", "hint", [
+      "", "Linky plynule tečou — u sbíhavých se točí kolem bodu.",
+      "Posun linek probíhá vrstvami tvaru jako vlna.", "Tvar se pomalu zvětšuje a zmenšuje."][an.type]),
+    (an.type === 2 || an.type === 3) && c.type < 0 ? el("p", "hint", "Vlna a Dech potřebují tvar — vyber ho v boxu Tvar.") : null,
+    an.type > 0 && range("Rychlost", an, "speed", 0.05, 1, 0.01, v => `${(1 / v).toFixed(1)} s`),
+    an.type > 0 && field("Video", rec),
+  ]));
+
+  const cm = s.camera, camOn = !!cam.stream;
+  const camBtn = el("button", "btn mono" + (camOn ? " secondary" : ""), camOn ? "Vypnout kameru" : "Zapnout kameru");
+  camBtn.addEventListener("click", () => camOn ? stopCamera() : startCamera());
+  const camRow = el("div", "btn-row");
+  camRow.append(camBtn);
+  add(box("kamera", "Kamera", camOn ? "Živě" : "Vykreslí tě linkami", [
+    camRow,
+    cam.error ? el("p", "hint", cam.error) : null,
+    camOn && el("p", "hint", "Linky zůstanou rovné — sílí ve tmavých místech, ve světlých se přeruší."),
+    camOn && range("Síla", cm, "amount", 0, 1, 0.01, pct),
+    camOn && range("Kontrast", cm, "contrast", 0.5, 4, 0.05, v => v.toFixed(1) + "×"),
+    camOn && range("Detail", cm, "detail", 0, 1, 0.01, v => v < 0.34 ? "Plochy" : v < 0.67 ? "Střední" : "Jemný"),
+    camOn && range("Hladkost", cm, "smooth", 0, 1, 0.01, pct),
+    camOn && field("Obraz", seg([["Pozitiv", 0], ["Negativ", 1]], cm, "invert")),
+    camOn && field("Zrcadlit", seg([["Ano", 1], ["Ne", 0]], cm, "mirror")),
+    camOn && el("p", "hint", "Nejčistší portrét: Rovnoběžné linky, 30–50 linek, Dvě barvy. Když jsou linky světlejší než pozadí, přepni na Negativ. Obraz jde do PNG i videa, do SVG ne."),
+  ]));
+
+  const hasMusic = !!(music.el && music.el.src);
+  const upload = el("label", "btn mono" + (hasMusic ? " secondary" : ""), hasMusic ? "Jiná písnička" : "Nahrát písničku");
+  const fileIn = el("input");
+  Object.assign(fileIn, { type: "file", accept: "audio/*" });
+  fileIn.hidden = true;
+  fileIn.addEventListener("change", () => fileIn.files[0] && loadMusic(fileIn.files[0]));
+  upload.append(fileIn);
+  const uploadRow = el("div", "btn-row");
+  uploadRow.append(upload);
+  let player = null, meters = null, musicRec = null;
+  if (hasMusic) {
+    player = el("div", "player");
+    const play = el("button", "icon-btn", musicPlaying() ? "❚❚" : "▶");
+    play.addEventListener("click", () => { music.ctx.resume(); musicPlaying() ? music.el.pause() : music.el.play(); });
+    const info = el("div", "player-info");
+    info.append(el("div", "player-name", music.name), el("div", "mono", ""));
+    info.lastChild.id = "music-time";
+    player.append(play, info);
+    meters = el("div", "meters");
+    [["meter-bass", "Basy"], ["meter-mid", "Středy"], ["meter-high", "Výšky"]].forEach(([id, label]) => {
+      const mtr = el("div", "meter");
+      const bar = el("div", "meter-bar"); bar.id = id;
+      mtr.append(bar, el("span", "mono", label));
+      meters.append(mtr);
+    });
+    musicRec = el("button", "btn mono", recording && recording.audio ? "Zastavit nahrávání" : "Nahrát video s hudbou");
+    musicRec.disabled = !!recording && !recording.audio;
+    musicRec.addEventListener("click", () => {
+      if (recording) { stopRecording(); return; }
+      music.ctx.resume();
+      music.el.currentTime = 0;
+      music.el.play();
+      startRecording({ audio: true, name: `foul-${music.name || "music"}` });
+    });
+  }
+  add(box("hudba", "Hudba", hasMusic ? "Pattern hraje s písničkou" : "MP3, WAV, M4A", [
+    uploadRow,
+    player && field("Přehrávání", player),
+    meters,
+    hasMusic && range("Basy → pulz tvaru", s.music, "pulse", 0, 1, 0.01, pct),
+    hasMusic && range("Středy → tok linek", s.music, "flow", 0, 1, 0.01, pct),
+    hasMusic && range("Výšky → tloušťka", s.music, "thick", 0, 1, 0.01, pct),
+    hasMusic && c.type < 0 ? el("p", "hint", "Pulz tvaru potřebuje tvar — vyber ho v boxu Tvar.") : null,
+    musicRec && field("Video", (() => { const r = el("div", "btn-row"); r.append(musicRec); return r; })()),
+    musicRec && el("p", "hint", "Písnička se pustí od začátku a nahrává se až do konce, nebo dokud nahrávání nezastavíš."),
+  ]));
+
+  const exp = el("div", "btn-row");
+  const svgBtn = el("button", "btn mono", "SVG");
+  svgBtn.title = "Vektor pro Figmu";
+  svgBtn.addEventListener("click", exportSvg);
+  exp.append(svgBtn);
+  [[2000, "PNG 2K"], [4000, "PNG 4K"]].forEach(([size, label]) => {
+    const b = el("button", "btn mono secondary", label);
+    b.addEventListener("click", () => exportPng(size));
+    exp.append(b);
+  });
+  add(box("export", "Export", "Formát 1:1", [exp]));
+
+  panel.scrollTop = scroll;
+}
+
+/* ============ export ============ */
+function exportPng(size) {
+  size = Math.min(size, gl.getParameter(gl.MAX_VIEWPORT_DIMS)[0]);
+  canvas.width = size; canvas.height = size;
+  draw(size, size, (performance.now() - clockStart) / 1000, 4);
+  canvas.toBlob(blob => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `foul-pattern-${size}px.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    canvas.width = 0; render();
+  }, "image/png");
+}
+
+/* ============ SVG ============ */
+// Stejná geometrie jako shader, ale jako vektorové cesty: každá vrstva = pozadí + linky s vlastním posunem,
+// oříznuté tvarem. Hrany linek s proměnlivou tloušťkou se dopočítávají iterací a vzorkují.
+const S = 1000;
+const f2 = v => (Math.round(v * S * 100) / 100).toString();
+const clamp01 = v => Math.min(1, Math.max(0, v));
+
+function dutyAt(x, y) {
+  const a = rad(state.dDir), dx = Math.cos(a), dy = Math.sin(a);
+  const t = clamp01(((x - 0.5) * dx + (y - 0.5) * dy) / (Math.abs(dx) + Math.abs(dy)) + 0.5);
+  return clampDuty(state.duty + (state.duty2 - state.duty) * t + musicMod.duty);
+}
+
+function stripesPath(shift) {
+  const parts = [];
+  if (state.mode === 0) {
+    const N = state.n, vert = state.orient === 0, steps = 12;
+    const xy = (u, v) => vert ? [u, v] : [v, u];
+    for (let k = Math.floor(-shift) - 1; k <= Math.ceil(N - shift) + 1; k++) {
+      const ul = (k - shift) / N;
+      const left = [], right = [];
+      for (let i = 0; i <= steps; i++) {
+        const v = i / steps;
+        let u = ul;
+        for (let it = 0; it < 6; it++) u = (k - shift + dutyAt(...xy(u, v))) / N;
+        left.push(xy(ul, v)); right.push(xy(u, v));
+      }
+      parts.push(poly(left.concat(right.reverse())));
+    }
+  } else {
+    const m = Math.floor(state.n * 2 + 0.5), R = 1.5, steps = 28;
+    const vx = state.vx, vy = state.vy;
+    const K0 = Math.ceil(-m / 2 + shift);
+    for (let k = K0; k < K0 + m; k++) {
+      const tl = (k - shift) * TAU / m;
+      const left = [[vx, vy]], right = [];
+      for (let i = 1; i <= steps; i++) {
+        const r = R * i / steps;
+        let t = tl;
+        for (let it = 0; it < 6; it++) t = (k - shift + dutyAt(vx + r * Math.cos(t), vy + r * Math.sin(t))) * TAU / m;
+        left.push([vx + r * Math.cos(tl), vy + r * Math.sin(tl)]);
+        right.push([vx + r * Math.cos(t), vy + r * Math.sin(t)]);
+      }
+      parts.push(poly(left.concat(right.reverse())));
+    }
+  }
+  return parts.join("");
+}
+const poly = pts => "M" + pts.map(([x, y]) => f2(x) + " " + f2(y)).join("L") + "Z";
+
+function shapeClip(sh) {
+  const x = sh.x, y = sh.y;
+  const rectPath = (w, h) => `M${f2(x - w / 2)} ${f2(y - h / 2)}h${f2(w)}v${f2(h)}h${f2(-w)}Z`;
+  const circlePath = r => `M${f2(x - r)} ${f2(y)}a${f2(r)} ${f2(r)} 0 1 0 ${f2(2 * r)} 0a${f2(r)} ${f2(r)} 0 1 0 ${f2(-2 * r)} 0Z`;
+  if (sh.type === 0) {
+    const [w, h] = sh.vertical ? [sh.h, sh.w] : [sh.w, sh.h];
+    return `<path d="${rectPath(w, h)}"/>`;
+  }
+  if (sh.type === 1) {
+    const r = sh.w / 2;
+    if (sh.stroke > 0 && r > sh.stroke) return `<path fill-rule="evenodd" clip-rule="evenodd" d="${circlePath(r)}${circlePath(r - sh.stroke)}"/>`;
+    return `<path d="${circlePath(r)}"/>`;
+  }
+  if (sh.stroke > 0 && sh.w / 2 > sh.stroke && sh.h / 2 > sh.stroke)
+    return `<path fill-rule="evenodd" clip-rule="evenodd" d="${rectPath(sh.w, sh.h)}${rectPath(sh.w - 2 * sh.stroke, sh.h - 2 * sh.stroke)}"/>`;
+  return `<path d="${rectPath(sh.w, sh.h)}"/>`;
+}
+
+function mixHex(a, b, t) {
+  const A = hex(a), B = hex(b);
+  return "#" + A.map((v, i) => Math.round((v + (B[i] - v) * t) * 255).toString(16).padStart(2, "0")).join("");
+}
+
+function buildSvg() {
+  const t = (performance.now() - clockStart) / 1000;
+  const flow = ((state.anim.type === 1 ? t * state.anim.speed : 0) + musicMod.flow) % 1;
+  const shapes = shapeList(t);
+  const defs = [`<clipPath id="frame"><rect width="${S}" height="${S}"/></clipPath>`];
+  const gradDef = (id, c1, c2, gType, gDir) => {
+    const stops = `<stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/>`;
+    if (gType === 1) return `<radialGradient id="${id}" cx="${S / 2}" cy="${S / 2}" r="${f2(0.7071)}" gradientUnits="userSpaceOnUse">${stops}</radialGradient>`;
+    // along(): t = 0 a 1 leží na přímce 0.5 + d·λ pro λ = ∓(|dx| + |dy|) / 2
+    const a = rad(gDir), dx = Math.cos(a), dy = Math.sin(a), lam = -(Math.abs(dx) + Math.abs(dy)) / 2;
+    const x1 = 0.5 + dx * lam, y1 = 0.5 + dy * lam;
+    return `<linearGradient id="${id}" x1="${f2(x1)}" y1="${f2(y1)}" x2="${f2(1 - x1)}" y2="${f2(1 - y1)}" gradientUnits="userSpaceOnUse">${stops}</linearGradient>`;
+  };
+  const L = state.line, Bg = state.bg;
+  let bgFill = Bg.c1, lineFill = L.c1;
+  if (Bg.type === 1) { defs.push(gradDef("base", Bg.c1, Bg.c2, Bg.gType, Bg.gDir)); bgFill = "url(#base)"; }
+  if (L.type === 1) { defs.push(gradDef("line", L.c1, L.c2, L.gType, L.gDir)); lineFill = "url(#line)"; }
+  if (L.type === 2) {
+    const to = L.contrast >= 0 ? "#ffffff" : "#000000", k = Math.abs(L.contrast);
+    if (Bg.type === 0) lineFill = mixHex(Bg.c1, to, k);
+    else { defs.push(gradDef("line", mixHex(Bg.c1, to, k), mixHex(Bg.c2, to, k), Bg.gType, Bg.gDir)); lineFill = "url(#line)"; }
+  }
+  const layer = (name, shift, clip) =>
+    `<g id="${name}"${clip ? ` clip-path="url(#${clip})"` : ""}>` +
+    `<rect id="${name} pozadí" width="${S}" height="${S}" fill="${bgFill}"/>` +
+    `<path id="${name} linky" fill="${lineFill}" d="${stripesPath(shift)}"/></g>`;
+
+  const body = [layer("Základ", flow)];
+  let acc = flow;
+  shapes.forEach((sh, i) => {
+    // vnořené plné tvary se sčítají; tvary s obrysem se nepřekrývají, posun je jen vlastní
+    acc = sh.stroke > 0 ? flow + sh.shift : acc + sh.shift;
+    defs.push(`<clipPath id="tvar-${i + 1}">${shapeClip(sh)}</clipPath>`);
+    body.push(layer(`Vrstva ${i + 1}`, acc, `tvar-${i + 1}`));
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}" viewBox="0 0 ${S} ${S}">` +
+    `<defs>${defs.join("")}</defs><g id="FOUL pattern" clip-path="url(#frame)">${body.join("")}</g></svg>`;
+}
+
+function exportSvg() {
+  const blob = new Blob([buildSvg()], { type: "image/svg+xml" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "foul-pattern.svg";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ============ video ============ */
+function recordLoop() {
+  const loop = 1 / state.anim.speed;
+  startRecording({ duration: loop * Math.max(1, Math.ceil(4 / loop)), name: "foul-pattern-loop" });   // aspoň 4 s, celé smyčky
+}
+
+function startRecording({ audio = false, duration = 0, name }) {
+  if (recording || !window.MediaRecorder) return;
+  const types = audio
+    ? ["video/mp4;codecs=avc1,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"]
+    : ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"];
+  const mimeType = types.find(t => MediaRecorder.isTypeSupported(t)) || "";
+  const stream = canvas.captureStream(60);
+  if (audio) music.dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
+  const rec = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 16e6, audioBitsPerSecond: 256e3 });
+  const chunks = [];
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = () => {
+    const blob = new Blob(chunks, { type: rec.mimeType });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${name}.${rec.mimeType.includes("mp4") ? "mp4" : "webm"}`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    recording = null; canvas.width = 0; build(); render();
+  };
+  recording = { size: 1080, start: performance.now(), rec, audio };
+  rec.start();
+  build(); render();
+  if (duration) setTimeout(stopRecording, duration * 1000);
+}
+
+function stopRecording() {
+  if (recording && recording.rec.state !== "inactive") recording.rec.stop();
+  if (recording && recording.audio && musicPlaying()) music.el.pause();
+}
+
+/* ============ theme ============ */
+const themeState = { t: "light" };
+try { themeState.t = localStorage.getItem("foul-theme") || "light"; } catch (e) {}
+function buildTheme() {
+  document.documentElement.dataset.theme = themeState.t;
+  const wrap = document.getElementById("theme");
+  wrap.innerHTML = "";
+  [["Light", "light"], ["Dark", "dark"]].forEach(([name, val]) => {
+    const b = el("button", themeState.t === val ? "on" : "", name);
+    b.addEventListener("click", () => {
+      themeState.t = val;
+      try { localStorage.setItem("foul-theme", val); } catch (e) {}
+      buildTheme();
+    });
+    wrap.append(b);
+  });
+}
+
+buildTheme();
+build();
+new ResizeObserver(render).observe(canvas);
+render();
+</script>
+</body>
+</html>
